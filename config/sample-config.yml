@@ -1,0 +1,16 @@
+server:
+  port: 53
+  address: 0.0.0.0
+
+domains:
+  - name: gson.local
+    host: localhost
+    listenPort: 80
+    targetPort: 8090
+
+  - name: pfcco.local
+    host: localhost
+    listenPort: 80
+    targetPort: 8080
+
+    
