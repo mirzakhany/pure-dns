@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
@@ -15,18 +14,17 @@ const (
 	configName = "config"
 )
 
-var config ConfYaml
+// Config hold application config
+var Config ConfYaml
 
 var defaultConf = []byte(`
 server:
   port: 53
-  address: 0.0.0.0
+  address: 127.0.0.1
 
 domains:
   - name: pure-dns.local
     host: localhost
-    listenPort: 80
-    targetPort: 8090
 
 log:
     format: "string" 
@@ -41,7 +39,7 @@ type ConfYaml struct {
 	Server    SectionServer    `yaml:"server"`
 	Domains   []SectionDomains `yaml:"domains"`
 	Log       SectionLog       `yaml:"log"`
-	DomainMap map[string]SectionDomains
+	DomainMap map[string]string
 }
 
 // SectionServer is sub section of config
@@ -52,10 +50,8 @@ type SectionServer struct {
 
 // SectionDomains is sub section of config
 type SectionDomains struct {
-	Name       string `yaml:"name"`
-	Host       string `yaml:"host"`
-	listenPort int    `yaml:"listenPort"`
-	targetPort int    `yaml:"targetPort"`
+	Name string `yaml:"name"`
+	Host string `yaml:"host"`
 }
 
 // SectionLog is sub section of config.
@@ -67,15 +63,10 @@ type SectionLog struct {
 	ErrorLevel  string `yaml:"error_level"`
 }
 
-// Get return confYaml
-func Get() ConfYaml {
-	return config
-}
-
-func convertToMap(domains []SectionDomains) map[string]SectionDomains {
-	var resule = make(map[string]SectionDomains)
+func convertToMap(domains []SectionDomains) map[string]string {
+	var resule = make(map[string]string)
 	for _, domain := range domains {
-		resule[domain.Host] = domain
+		resule[domain.Name] = domain.Host
 	}
 	return resule
 }
@@ -103,7 +94,6 @@ func loadData() (ConfYaml, error) {
 // LoadConf load the config settings
 func LoadConf(prefix string, configPath string) (ConfYaml, error) {
 
-	var conf ConfYaml
 	lowerPrefix := strings.ToLower(prefix)
 
 	viper.SetConfigType("yaml")
@@ -114,10 +104,10 @@ func LoadConf(prefix string, configPath string) (ConfYaml, error) {
 	if configPath != "" {
 		content, err := ioutil.ReadFile(configPath)
 		if err != nil {
-			return conf, err
+			return Config, err
 		}
 		if err := viper.ReadConfig(bytes.NewBuffer(content)); err != nil {
-			return conf, err
+			return Config, err
 		}
 	} else {
 
@@ -129,21 +119,15 @@ func LoadConf(prefix string, configPath string) (ConfYaml, error) {
 		// If a config file is found, read it in.
 		if err := viper.ReadInConfig(); err == nil {
 			fmt.Println("Using config file:", viper.ConfigFileUsed())
-
-			viper.WatchConfig()
-			viper.OnConfigChange(func(e fsnotify.Event) {
-				config, _ = loadData()
-				fmt.Println("Config file changed:", e.Name)
-			})
-
 		} else {
 			fmt.Println("load default config ...")
 			// load default config
 			if err := viper.ReadConfig(bytes.NewBuffer(defaultConf)); err != nil {
-				return conf, err
+				return Config, err
 			}
 		}
 	}
-	config, err := loadData()
-	return config, err
+
+	Config, err := loadData()
+	return Config, err
 }

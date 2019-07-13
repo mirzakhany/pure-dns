@@ -1,16 +1,15 @@
 server:
   port: 53
-  address: 0.0.0.0
+  address: 127.0.0.1
 
 domains:
-  - name: gson.local
+  - name: pure-dns.local
     host: localhost
-    listenPort: 80
-    targetPort: 8090
 
-  - name: pfcco.local
-    host: localhost
-    listenPort: 80
-    targetPort: 8080
-
+log:
+  format: "string" 
+  access_log: "stdout" 
+  access_level: "debug"
+  error_log: "stderr"
+  error_level: "error"
     

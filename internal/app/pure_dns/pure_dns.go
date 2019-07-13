@@ -32,7 +32,7 @@ func InitPureDNS(appName string, configPath string) error {
 	var g errgroup.Group
 
 	g.Go(func() error {
-		return dns.StartDNSServer()
+		return dns.StartDNSServer(config)
 	})
 
 	fmt.Println(fmt.Sprintf("DNS Server Start On %s:%d", config.Server.Address, config.Server.Port))

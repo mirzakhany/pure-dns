@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/miekg/dns"
 	"github.com/mirzakhany/pure_dns/internal/pkg/config"
@@ -11,14 +12,16 @@ import (
 
 type handler struct{}
 
+var domains map[string]string
+
 func mapToIP(domain string) (string, bool) {
 
-	domains := config.Get().DomainMap
-	domainSetting, ok := domains[domain]
+	ipAddr, ok := domains[strings.TrimSuffix(domain, ".")]
 	if !ok {
+		log.Println("not ok")
 		return "", ok
 	}
-	return domainSetting.Host, ok
+	return ipAddr, ok
 }
 
 func (h *handler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
@@ -40,15 +43,12 @@ func (h *handler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 // StartDNSServer start dns server
-func StartDNSServer() error {
-
-	conf := config.Get()
-
+func StartDNSServer(conf config.ConfYaml) error {
+	domains = conf.DomainMap
 	srv := &dns.Server{Addr: conf.Server.Address + ":" + strconv.Itoa(conf.Server.Port), Net: "udp"}
 	srv.Handler = &handler{}
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("Failed to set udp listener %s\n", err.Error())
 	}
-
 	return nil
 }
