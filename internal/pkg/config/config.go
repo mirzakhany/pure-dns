@@ -26,21 +26,22 @@ domains:
   - name: pure-dns.local
     host: localhost
     listenPort: 80
-	targetPort: 8090
-	
+    targetPort: 8090
+
 log:
-	format: "string" # string or json
-	access_log: "stdout" # stdout: output to console, or define log path like "log/access_log"
-	access_level: "debug"
-	error_log: "stderr" # stderr: output to console, or define log path like "log/error_log"
-	error_level: "error"  
+    format: "string" 
+    access_log: "stdout" 
+    access_level: "debug"
+    error_log: "stderr"
+    error_level: "error"
 `)
 
 // ConfYaml is config struct
 type ConfYaml struct {
-	Server  SectionServer    `yml:"server"`
-	Domains []SectionDomains `yml:"domains"`
-	Log     SectionLog       `yml:"log"`
+	Server    SectionServer    `yaml:"server"`
+	Domains   []SectionDomains `yaml:"domains"`
+	Log       SectionLog       `yaml:"log"`
+	DomainMap map[string]SectionDomains
 }
 
 // SectionServer is sub section of config
@@ -69,6 +70,34 @@ type SectionLog struct {
 // Get return confYaml
 func Get() ConfYaml {
 	return config
+}
+
+func convertToMap(domains []SectionDomains) map[string]SectionDomains {
+	var resule = make(map[string]SectionDomains)
+	for _, domain := range domains {
+		resule[domain.Host] = domain
+	}
+	return resule
+}
+
+func loadData() (ConfYaml, error) {
+
+	var conf ConfYaml
+	conf.Server.Address = viper.GetString("server.address")
+	conf.Server.Port = viper.GetInt("server.port")
+
+	err := viper.UnmarshalKey("domains", &conf.Domains)
+	if err != nil {
+		return conf, err
+	}
+	conf.Log.Format = viper.GetString("log.format")
+	conf.Log.AccessLog = viper.GetString("log.access_log")
+	conf.Log.AccessLevel = viper.GetString("log.access_level")
+	conf.Log.ErrorLog = viper.GetString("log.error_log")
+	conf.Log.ErrorLevel = viper.GetString("log.error_level")
+
+	conf.DomainMap = convertToMap(conf.Domains)
+	return conf, err
 }
 
 // LoadConf load the config settings
@@ -103,6 +132,7 @@ func LoadConf(prefix string, configPath string) (ConfYaml, error) {
 
 			viper.WatchConfig()
 			viper.OnConfigChange(func(e fsnotify.Event) {
+				config, _ = loadData()
 				fmt.Println("Config file changed:", e.Name)
 			})
 
@@ -114,23 +144,6 @@ func LoadConf(prefix string, configPath string) (ConfYaml, error) {
 			}
 		}
 	}
-
-	var err error
-
-	conf.Server.Address = viper.GetString("server.address")
-	conf.Server.Port = viper.GetInt("server.port")
-
-	err = viper.UnmarshalKey("domains", &conf.Domains)
-	if err != nil {
-		return conf, err
-	}
-	conf.Log.Format = viper.GetString("log.format")
-	conf.Log.AccessLog = viper.GetString("log.access_log")
-	conf.Log.AccessLevel = viper.GetString("log.access_level")
-	conf.Log.ErrorLog = viper.GetString("log.error_log")
-	conf.Log.ErrorLevel = viper.GetString("log.error_level")
-
-	config = conf
-
-	return conf, err
+	config, err := loadData()
+	return config, err
 }
